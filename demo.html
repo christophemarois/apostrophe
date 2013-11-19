@@ -1,0 +1,37 @@
+<html>
+  <head>
+
+    <title>jquery.apostrophe</title>
+
+    <!-- Vendors -->
+    <script src="lib/less-1.5.0.min.js" type="text/javascript"></script>
+    <script src="lib/jquery-git2.js" type="text/javascript"></script>
+
+    <!-- Plugin -->
+    <script src="jquery.apostrophe.js" type="text/javascript"></script>
+
+    <!-- <link rel="stylesheet" type="text/css" href="css/apostrophe.css" > -->
+    <link rel="stylesheet/less" type="text/css" href="css/apostrophe.less" />
+
+    <script type="text/javascript">
+      $(function(){
+        $('#apostrophed').apostrophe();
+      });
+    </script>
+
+    <style type="text/css">
+      textarea {
+        width: 500px;
+        height: 500px;
+        resize: none;
+        padding: 10px;
+        font-size: 14px;
+        line-height: 18px;
+      }
+    </style>
+
+  </head>
+  <body>
+    <textarea id="apostrophed" placeholder="Type here"></textarea>
+  </body>
+</html>
