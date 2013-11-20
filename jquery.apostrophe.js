@@ -48,7 +48,7 @@
 
         // Merge them with the computed styles that matter
         var style = $.extend(posAndDims,
-          $el.getStyles(config.mirroredStyles));
+          $.apostrophe.getStyles(el, config.mirroredStyles));
 
         // Create mirror, style it and append it to body
         var $mirror = $('<div class="apostrophe-mirror" />')
@@ -78,23 +78,19 @@
   // Update event.
   $.apostrophe.update = function(e) {
 
-    // Translate linebreaks and spaces to html
-    var html_value = this.value
-      .split(" ").join('&nbsp;')
-      .split("\n").join("<br/>");
+    // Translate linebreaks to html
+    var html_value = this.value.split("\n").join("<br/>");
 
     // Push updated content to the mirror
     this.mirror.innerHTML = html_value;
 
   };
 
-  // Helpers to get computed styles
-  $.fn.getStyles = function (props) {
+  // Polyfill to get computed styles
+  $.apostrophe.getStyles = function (el, props) {
 
-    var el = this.get(0), results = {};
-
-    if (typeof props === "string")
-      props = [props];
+    var results = {};
+    if (typeof props === "string") props = [props];
 
     $.each(props, function(i, prop) {
       if (el.currentStyle)
