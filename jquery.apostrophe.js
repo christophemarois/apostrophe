@@ -11,7 +11,7 @@
   $.apostrophe.config = {
 
     // Handlers that trigger the update event (separated by spaces)
-    eventHandlers: 'keyup',
+    eventHandlers: 'keydown keypress input change blur',
 
     // Computed textarea styles that have to be copied to the mirror.
     mirroredStyles: [
@@ -92,7 +92,7 @@
 
   };
 
-  // Polyfill to get computed styles
+  // Polyfill helper to get computed styles
   $.apostrophe.getStyles = function (el, props) {
 
     var results = {};
