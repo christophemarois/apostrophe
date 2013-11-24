@@ -19,7 +19,8 @@
       'padding-top', 'padding-right', 'padding-bottom', 'padding-left',
       'border-top', 'border-right', 'border-bottom', 'border-left',
       'font-family', 'font-size', 'font-weight', 'font-style',
-      'letter-spacing', 'text-transform', 'word-spacing','text-indent', 'line-height'
+      'letter-spacing', 'text-transform', 'word-spacing','text-indent',
+      'line-height'
     ]
 
   };
@@ -59,12 +60,13 @@
 
         $el
           // Update event
-          .on(config.eventHandlers, $.apostrophe.update)
+          .on(config.eventHandlers, $.apostrophe.updateContent)
 
           // Destroy event
           .on('apostrophe.destroy', function(){
-            $el.off(config.eventHandlers, $.apostrophe.update);
-            delete el.mirror;
+            $el
+              .off(config.eventHandlers, $.apostrophe.updateContent)
+              .removeProp('mirror');
             $mirror.remove();
           });
 
@@ -75,11 +77,15 @@
 
   };
 
-  // Update event.
-  $.apostrophe.update = function(e) {
+  // Update content event.
+  $.apostrophe.updateContent = function(e) {
 
     // Translate linebreaks to html
     var html_value = this.value.split("\n").join("<br/>");
+
+    // Styling example
+    html_value = html_value
+      .replace(/Christophe/g, '<span>Christophe</span>');
 
     // Push updated content to the mirror
     this.mirror.innerHTML = html_value;
