@@ -11,7 +11,7 @@
   $.apostrophe.config = {
 
     // Handlers that trigger the update event (separated by spaces)
-    eventHandlers: 'keydown keypress input change blur',
+    eventHandlers: 'keydown',
 
     // Computed textarea styles that have to be copied to the mirror.
     mirroredStyles: [
@@ -28,7 +28,7 @@
   $.fn.apostrophe = function(config) {
 
     // Extend global config with config arguments
-    config = $.extend($.apostrophe.config, config || {});
+    var config = $.extend($.apostrophe.config, config || {});
 
     this
       // Keep only uninitialized textareas
@@ -83,16 +83,34 @@
     // Translate linebreaks to html
     var html_value = this.value.split("\n").join("<br/>");
 
-    // Styling example
-    html_value = html_value
-      .replace(/Christophe/g, '<span>Christophe</span>');
+    // If there isn't a selection, get the text pointer position
+    var charIndex = this.selectionStart == this.selectionEnd ?
+      this.selectionStart : false;
+
+    var currentChar = this.value.charAt( charIndex < 0 ? 0 : charIndex );
+
+    console.log(charIndex, currentChar);
+
+    //html_value = html_value.replace(/Louis/g, '<span>Louis</span>');
 
     // Push updated content to the mirror
     this.mirror.innerHTML = html_value;
 
   };
 
+  // Verbose enum names
+  $.apostrophe.keys = {
+    BACKSPACE:  8,    TAB:    9,
+    LEFT:       37,   UP:     38,
+    COMMA:      188,  SPACE:  32,
+    RETURN:     13,   ESC:    27,
+    RIGHT:      39,   DOWN:   40,
+    HOME:       36,   END:    35
+  };
+
   // Polyfill helper to get computed styles
+  // 'el' should be a DOM element, and 'props' an array of
+  // CSS properties or a string of a single property .
   $.apostrophe.getStyles = function (el, props) {
 
     var results = {};
