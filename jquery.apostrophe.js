@@ -3,7 +3,7 @@
 // (c) Syme (git @ symeapp)
 // Released under the MIT license
 
-(function($) {
+(function($, _) {
 
   $.apostrophe = {};
 
@@ -11,17 +11,30 @@
   $.apostrophe.config = {
 
     // Handlers that trigger the update event (separated by spaces)
-    eventHandlers: 'keydown',
+    eventHandlers: 'input',
+
+    // After how many characters do we start considering a word as a
+    // potential name?
+    minimalLength: 3,
 
     // Computed textarea styles that have to be copied to the mirror.
     mirroredStyles: [
-      'margin-top', 'margin-right', 'margin-bottom', 'margin-left',
-      'padding-top', 'padding-right', 'padding-bottom', 'padding-left',
-      'border-top', 'border-right', 'border-bottom', 'border-left',
-      'font-family', 'font-size', 'font-weight', 'font-style',
-      'letter-spacing', 'text-transform', 'word-spacing','text-indent',
+      'margin-top',     'margin-right',   'margin-bottom',  'margin-left',
+      'padding-top',    'padding-right',  'padding-bottom', 'padding-left',
+      'border-top',     'border-right',   'border-bottom',  'border-left',
+      'font-family',    'font-size',      'font-weight',    'font-style',
+      'letter-spacing', 'text-transform', 'word-spacing',   'text-indent',
       'line-height'
-    ]
+    ],
+
+    // Verbose enum keycodes
+    keycodes: {
+      BACKSPACE:  8,    TAB:    9,
+      COMMA:      188,  SPACE:  32,
+      RETURN:     13,   ESC:    27,
+      LEFT:       37,   UP:     38,
+      RIGHT:      39,   DOWN:   40
+    }
 
   };
 
@@ -55,6 +68,9 @@
         var $mirror = $('<div class="apostrophe-mirror" />')
           .css(style).appendTo('body');
 
+        // Link the people list to the textarea
+        el.people = config.people;
+
         // Link the DOM mirror as an attribute to the textarea.
         el.mirror = $mirror.get(0);
 
@@ -83,29 +99,37 @@
     // Translate linebreaks to html
     var html_value = this.value.split("\n").join("<br/>");
 
-    // If there isn't a selection, get the text pointer position
-    var charIndex = this.selectionStart == this.selectionEnd ?
-      this.selectionStart : false;
+    // Calculate index and nature of inputted character
+    var charIndex   = this.selectionStart <= 0 ? 0 : this.selectionStart,
+        currentChar = this.value.charAt(charIndex);
 
-    var currentChar = this.value.charAt( charIndex < 0 ? 0 : charIndex );
+    // Find out what the current word is.
+    var textBefore      = this.value.substr(0, charIndex),
+        textAfter       = this.value.substr(charIndex),
+        textBeforeEnd   = textBefore.split(' '),
+        textBeforeEnd   = textBeforeEnd[textBeforeEnd.length - 1];
+        textAfterStart  = textAfter.split(' ')[0],
+        currentWord     = (textBeforeEnd + textAfterStart).trim();
 
-    console.log(charIndex, currentChar);
+    // Does the current word look like a name?
+    var looksLikeName = /^[A-Z]/.test(currentWord)
+      && currentWord.length >= $.apostrophe.config.minimalLength;
 
-    //html_value = html_value.replace(/Louis/g, '<span>Louis</span>');
+    if ( looksLikeName ) {
+
+      // Keep the names that could match the current word
+      var potentialNames = _.filter(_.keys(this.people), function(name){
+        return (new RegExp('^' + currentWord)).test(name);
+      });
+
+      if ( potentialNames.length > 0 )
+        console.log("Looks like you're about to mention", potentialNames[0]);
+
+    }
 
     // Push updated content to the mirror
     this.mirror.innerHTML = html_value;
 
-  };
-
-  // Verbose enum names
-  $.apostrophe.keys = {
-    BACKSPACE:  8,    TAB:    9,
-    LEFT:       37,   UP:     38,
-    COMMA:      188,  SPACE:  32,
-    RETURN:     13,   ESC:    27,
-    RIGHT:      39,   DOWN:   40,
-    HOME:       36,   END:    35
   };
 
   // Polyfill helper to get computed styles
@@ -129,4 +153,4 @@
 
   }
 
-})(jQuery);
+})(jQuery, _);
