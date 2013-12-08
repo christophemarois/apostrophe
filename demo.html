@@ -28,6 +28,7 @@
       $(function(){
         $('#apostrophed').apostrophe({ people: people });
       });
+
     </script>
 
     <style type="text/css">
@@ -52,9 +53,13 @@
         border-color: transparent !important;
       }
 
-      div.apostrophe-mirror span {
-        background-color: #BDFFEC;
-        border-radius: 3px;
+      div.apostrophe-mirror b {
+        font-weight: inherit;
+        background: -webkit-linear-gradient(#dce6f8, #bdcff1);
+        background:    -moz-linear-gradient(#dce6f8, #bdcff1);
+        background:         linear-gradient(#dce6f8, #bdcff1);
+        border-radius: 2px;
+        box-shadow: 0 0 0 1px #a3bcea;
       }
     </style>
 
