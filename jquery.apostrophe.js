@@ -116,11 +116,10 @@
 
       // Keep the names that could match the current word
       var potentialNames = _.filter(_.keys(this.people), function(name){
-        return (new RegExp('^' + currentWord)).test(name);
+        return (new RegExp(currentWord)).test(name);
       });
 
-      if ( potentialNames.length > 0 )
-        console.log("Looks like you're about to mention", potentialNames[0]);
+      if ( potentialNames.length > 0 ) console.log(potentialNames);
 
     }
 
