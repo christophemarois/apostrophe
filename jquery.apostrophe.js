@@ -17,6 +17,11 @@
     // potential name?
     minimalLength: 7,
 
+    // How close to a name should the levenshtein distance be
+    // to be considered as a possibility?
+    // From 0 to 2, 0 being exact maching and 2 being permissive.
+    levenshtein: 1,
+
     // Computed textarea styles that have to be copied to the mirror.
     mirroredStyles: [
       'margin-top',     'margin-right',   'margin-bottom',  'margin-left',
@@ -68,10 +73,9 @@
         var $mirror = $('<div class="apostrophe-mirror" />')
           .css(style).appendTo('body');
 
-        // Link the people list to the textarea
-        el.people = config.people;
-
-        // Link the DOM mirror as an attribute to the textarea.
+        // Link the config to the DOM textarea, and
+        // link the DOM mirror as an attribute to the textarea.
+        el.config = config;
         el.mirror = $mirror.get(0);
 
         $el
@@ -96,24 +100,24 @@
   // Update content event.
   $.apostrophe.updateContent = function(e) {
 
-    var html_value = this.value.replace(/\n/g, "<br/>");
+    var config = this.config;
 
     // Calculate index of inputted character
     var charIndex   = this.selectionStart <= 0 ? 0 : this.selectionStart;
 
-    // Find out what the current word is.
+    // Find out what the current text chunk is.
     var wordsBefore = this.value.substr(0, charIndex).split(' '),
         wordsAfter  = this.value.substr(charIndex).split(' '),
         currentWord = _.last(wordsBefore) + _.first(wordsAfter);
 
     // Does the current word look like a name?
     var looksLikeName = /^[A-Z]/.test(currentWord) &&
-      currentWord.length >= $.apostrophe.config.minimalLength;
+      currentWord.length >= config.minimalLength;
 
     // Are there names that ressemble it?
-    var potentialNames = _.filter(_.keys(this.people), function(name){
+    var potentialNames = _.filter(_.keys(config.people), function(name){
       return _.any(name.split(' '), function(partOfName){
-        return _.str.levenshtein(currentWord, partOfName) <= 2;
+        return _.str.levenshtein(currentWord, partOfName) <= config.levenshtein;
       });
     });
 
@@ -123,12 +127,10 @@
       HERE WILL GO THE DROPDOWN PART.
       FOR DEVELOPMENT PURPOSES, WE ASSUME THAT THE USER CHOSE THE FIRST RESULT
       */
-
       var selectedName = potentialNames[0];
 
       // DEVELOPMENT: DO IT ONLY ONCE FOR NOW
-      if(typeof first !== "undefined") return;
-      first = true;
+      if(typeof first !== "undefined") return; first = true;
 
       // Remove partial words
       wordsBefore.pop(); wordsAfter.shift();
@@ -139,7 +141,7 @@
 
       // Update source and mirror text (currently flawed).
       this.value = stringBefore + selectedName + stringAfter;
-      html_value = stringBefore + '<b>' + selectedName + '</b>' + stringAfter;
+      var html_value = stringBefore + '<b>' + selectedName + '</b>' + stringAfter;
 
       // Place the text caret after the mentionned name
       var newCaretPos = stringBefore.length + selectedName.length;
@@ -148,7 +150,7 @@
     }
 
     // Push HTML-linebreaked content to the mirror
-    this.mirror.innerHTML = html_value;
+    this.mirror.innerHTML = html_value || this.value.replace(/\n/g, "<br/>");
 
   };
 
