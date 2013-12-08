@@ -15,7 +15,7 @@
 
     // After how many characters do we start considering a word as a
     // potential name?
-    minimalLength: 3,
+    minimalLength: 7,
 
     // Computed textarea styles that have to be copied to the mirror.
     mirroredStyles: [
@@ -96,8 +96,7 @@
   // Update content event.
   $.apostrophe.updateContent = function(e) {
 
-    // Translate linebreaks to html
-    var html_value = this.value.split("\n").join("<br/>");
+    var html_value = this.value.replace(/\n/g, "<br/>");
 
     // Calculate index and nature of inputted character
     var charIndex   = this.selectionStart <= 0 ? 0 : this.selectionStart,
@@ -109,21 +108,33 @@
         currentWord = _.last(wordsBefore) + _.first(wordsAfter);
 
     // Does the current word look like a name?
-    var looksLikeName = /^[A-Z]/.test(currentWord)
-      && currentWord.length >= $.apostrophe.config.minimalLength;
+    var looksLikeName = /^[A-Z]/.test(currentWord) &&
+      currentWord.length >= $.apostrophe.config.minimalLength;
 
-    if ( looksLikeName ) {
-
-      // Keep the names that could match the current word
-      var potentialNames = _.filter(_.keys(this.people), function(name){
-        return (new RegExp(currentWord)).test(name);
+    // Are there names that ressemble it?
+    var potentialNames = _.filter(_.keys(this.people), function(name){
+      return _.any(name.split(' '), function(partOfName){
+        return _.str.levenshtein(currentWord, partOfName) <= 2;
       });
+    });
 
-      if ( potentialNames.length > 0 ) console.log(potentialNames);
+    if ( looksLikeName && potentialNames.length ) {
+
+      /*
+      HERE GOES THE DROPDOWN PART.
+      FOR DEVELOPMENT PURPOSES, WE ASSUME THAT THE USER CHOSE THE FIRST RESULT
+      */
+
+      // Remove partial words
+      wordsBefore.pop(); wordsAfter.shift();
+
+      // Update source text
+      this.value = wordsBefore.join(' ') + ' ' + potentialNames[0] + ' ' + wordsAfter.join(' ');
+      html_value = wordsBefore.join(' ') + ' <span>' + potentialNames[0] + '</span> ' + wordsAfter.join(' ');
 
     }
 
-    // Push updated content to the mirror
+    // Push HTML-linebreaked content to the mirror
     this.mirror.innerHTML = html_value;
 
   };
