@@ -7,6 +7,9 @@
 
   $.apostrophe = {};
 
+  // Mixin string functions to underscore
+  _.mixin(_.str.exports());
+
   // Default config
   $.apostrophe.config = {
 
@@ -15,7 +18,7 @@
 
     // After how many characters do we start considering a word as a
     // potential name?
-    minimalLength: 7,
+    minimalLength: 3,
 
     // How close to a name should the levenshtein distance be
     // to be considered as a possibility?
@@ -105,10 +108,25 @@
     // Calculate index of inputted character
     var charIndex   = this.selectionStart <= 0 ? 0 : this.selectionStart;
 
-    // Find out what the current text chunk is.
-    var wordsBefore = this.value.substr(0, charIndex).split(' '),
-        wordsAfter  = this.value.substr(charIndex).split(' '),
-        currentWord = _.last(wordsBefore) + _.first(wordsAfter);
+    // Split the text before and after the text caret.
+    var textBefore = this.value.substr(0, charIndex),
+        textAfter  = this.value.substr(charIndex);
+
+    var leftPart = '', rightPart = '';
+
+    for (var i = textBefore.length - 1; i > 0; i--) {
+      if (/\s/g.test(textBefore[i])) {
+        textBefore = textBefore.slice(0, i + 1); break;
+      } else leftPart = textBefore[i] + leftPart;
+    }
+
+    for (var j = 0; j < textAfter.length; j++) {
+      if (/\s/g.test(textAfter[j])) {
+        textAfter = textAfter.slice(j, textAfter.length); break;
+      } else rightPart += textAfter[j];
+    }
+
+    var currentWord = leftPart + rightPart;
 
     // Does the current word look like a name?
     var looksLikeName = /^[A-Z]/.test(currentWord) &&
@@ -117,7 +135,12 @@
     // Are there names that ressemble it?
     var potentialNames = _.filter(_.keys(config.people), function(name){
       return _.any(name.split(' '), function(partOfName){
-        return _.str.levenshtein(currentWord, partOfName) <= config.levenshtein;
+
+        // If currentWord is a perfect match of the beggining
+        // of partOfName, pass, otherwise, try a levenshtein distance
+        return (new RegExp('^' + currentWord)).test(partOfName) ||
+          _.str.levenshtein(currentWord, partOfName) <= config.levenshtein;
+
       });
     });
 
@@ -129,22 +152,15 @@
       */
       var selectedName = potentialNames[0];
 
-      // DEVELOPMENT: DO IT ONLY ONCE FOR NOW
+      // DEVELOPMENT: DO ONLY ONE MATCHING BY PAGELOAD
       if(typeof first !== "undefined") return; first = true;
 
-      // Remove partial words
-      wordsBefore.pop(); wordsAfter.shift();
-
-      // Calculate the enclosing strings
-      var stringBefore = wordsBefore.length > 0 ? wordsBefore.join(' ') + ' ' : '',
-          stringAfter  = wordsAfter.length > 0 ? ' ' + wordsAfter.join(' ') : '';
-
       // Update source and mirror text (currently flawed).
-      this.value = stringBefore + selectedName + stringAfter;
-      var html_value = stringBefore + '<b>' + selectedName + '</b>' + stringAfter;
+      this.value = textBefore + selectedName + textAfter;
+      var html_value = textBefore + '<b>' + selectedName + '</b>' + textAfter;
 
       // Place the text caret after the mentionned name
-      var newCaretPos = stringBefore.length + selectedName.length;
+      var newCaretPos = textBefore.length + selectedName.length;
       this.setSelectionRange(newCaretPos, newCaretPos);
 
     }
