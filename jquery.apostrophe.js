@@ -104,12 +104,9 @@
         currentChar = this.value.charAt(charIndex);
 
     // Find out what the current word is.
-    var textBefore      = this.value.substr(0, charIndex),
-        textAfter       = this.value.substr(charIndex),
-        textBeforeEnd   = textBefore.split(' '),
-        textBeforeEnd   = textBeforeEnd[textBeforeEnd.length - 1];
-        textAfterStart  = textAfter.split(' ')[0],
-        currentWord     = (textBeforeEnd + textAfterStart).trim();
+    var wordsBefore = this.value.substr(0, charIndex).split(' '),
+        wordsAfter  = this.value.substr(charIndex).split(' '),
+        currentWord = _.last(wordsBefore) + _.first(wordsAfter);
 
     // Does the current word look like a name?
     var looksLikeName = /^[A-Z]/.test(currentWord)
