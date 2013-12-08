@@ -98,9 +98,8 @@
 
     var html_value = this.value.replace(/\n/g, "<br/>");
 
-    // Calculate index and nature of inputted character
-    var charIndex   = this.selectionStart <= 0 ? 0 : this.selectionStart,
-        currentChar = this.value.charAt(charIndex);
+    // Calculate index of inputted character
+    var charIndex   = this.selectionStart <= 0 ? 0 : this.selectionStart;
 
     // Find out what the current word is.
     var wordsBefore = this.value.substr(0, charIndex).split(' '),
@@ -118,19 +117,33 @@
       });
     });
 
-    if ( looksLikeName && potentialNames.length ) {
+    if ( looksLikeName && potentialNames.length > 0 ) {
 
       /*
-      HERE GOES THE DROPDOWN PART.
+      HERE WILL GO THE DROPDOWN PART.
       FOR DEVELOPMENT PURPOSES, WE ASSUME THAT THE USER CHOSE THE FIRST RESULT
       */
+
+      var selectedName = potentialNames[0];
+
+      // DEVELOPMENT: DO IT ONLY ONCE FOR NOW
+      if(typeof first !== "undefined") return;
+      first = true;
 
       // Remove partial words
       wordsBefore.pop(); wordsAfter.shift();
 
-      // Update source text
-      this.value = wordsBefore.join(' ') + ' ' + potentialNames[0] + ' ' + wordsAfter.join(' ');
-      html_value = wordsBefore.join(' ') + ' <span>' + potentialNames[0] + '</span> ' + wordsAfter.join(' ');
+      // Calculate the enclosing strings
+      var stringBefore = wordsBefore.length > 0 ? wordsBefore.join(' ') + ' ' : '',
+          stringAfter  = wordsAfter.length > 0 ? ' ' + wordsAfter.join(' ') : '';
+
+      // Update source and mirror text (currently flawed).
+      this.value = stringBefore + selectedName + stringAfter;
+      html_value = stringBefore + '<b>' + selectedName + '</b>' + stringAfter;
+
+      // Place the text caret after the mentionned name
+      var newCaretPos = stringBefore.length + selectedName.length;
+      this.setSelectionRange(newCaretPos, newCaretPos);
 
     }
 
