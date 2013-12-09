@@ -75,10 +75,10 @@
         var $mirror = $('<div class="apostrophe-mirror" />')
           .css(style).appendTo('body');
 
-        // Link the config to the DOM textarea, and
-        // link the DOM mirror as an attribute to the textarea.
-        el.config = config;
-        el.mirror = $mirror.get(0);
+        // Initialize element DOM properties
+        el.mentionned = {};
+        el.config     = config;
+        el.mirror     = $mirror.get(0);
 
         $el
           // Update event
@@ -124,6 +124,7 @@
       });
     });
 
+    // DEVELOPMENT: AUTOMATICALLY PUT FIRST RESULT
     if ( looksLikeName && potentialNames.length > 0 )
       var html = $.apostrophe.placeName.call(this,
         potentialNames[0], parts.before, parts.after);
@@ -163,6 +164,13 @@
 
     // Update textarea with selected name
     this.value = before + selectedName + after;
+
+    // Pass the mentionned name from the names to the mentionned list
+    this.mentionned[selectedName] = this.config.names[selectedName];
+    this.config.names = _.omit(this.config.names, selectedName);
+
+    // Add the index of the name's beginning to the object
+    this.mentionned[selectedName].pos = before.length;
 
     // Place the text caret after the mentionned name
     var newCaretPos = before.length + selectedName.length;
