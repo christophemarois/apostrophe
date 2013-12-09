@@ -37,15 +37,14 @@
 
     // Verbose enum keycodes
     keycodes: {
-      BACKSPACE:  8,    TAB:    9,
-      COMMA:      188,  SPACE:  32,
-      RETURN:     13,   ESC:    27,
-      LEFT:       37,   UP:     38,
-      RIGHT:      39,   DOWN:   40
+      BACKSPACE:  8 , TAB:   9 ,  COMMA: 188,  SPACE:  32,
+      RETURN:     13, ESC:   27,  LEFT:  37 ,  UP:     38,
+      RIGHT:      39, DOWN:  40
     }
 
   };
 
+  // jQuery function. Makes mirror and bind events.
   $.fn.apostrophe = function(config) {
 
     // Extend global config with config arguments
@@ -83,12 +82,12 @@
 
         $el
           // Update event
-          .on(config.eventHandlers, $.apostrophe.updateContent)
+          .on(config.eventHandlers, $.apostrophe.updateAndCheck)
 
           // Destroy event
           .on('apostrophe.destroy', function(){
             $el
-              .off(config.eventHandlers, $.apostrophe.updateContent)
+              .off(config.eventHandlers, $.apostrophe.updateAndCheck)
               .removeProp('mirror');
             $mirror.remove();
           });
@@ -100,73 +99,77 @@
 
   };
 
-  // Update content event.
-  $.apostrophe.updateContent = function(e) {
+  // Update mirror and check for mentionned names.
+  $.apostrophe.updateAndCheck = function(e) {
 
     var config = this.config;
 
-    // Calculate index of inputted character
-    var charIndex   = this.selectionStart <= 0 ? 0 : this.selectionStart;
-
-    // Split the text before and after the text caret.
-    var textBefore = this.value.substr(0, charIndex),
-        textAfter  = this.value.substr(charIndex);
-
-    var leftPart = '', rightPart = '';
-
-    for (var i = textBefore.length - 1; i > 0; i--) {
-      if (/\s/g.test(textBefore[i])) {
-        textBefore = textBefore.slice(0, i + 1); break;
-      } else leftPart = textBefore[i] + leftPart;
-    }
-
-    for (var j = 0; j < textAfter.length; j++) {
-      if (/\s/g.test(textAfter[j])) {
-        textAfter = textAfter.slice(j, textAfter.length); break;
-      } else rightPart += textAfter[j];
-    }
-
-    var currentWord = leftPart + rightPart;
+    // Get current word with enclosing text at caret position
+    var charIndex = this.selectionStart <= 0 ? 0 : this.selectionStart,
+        parts     = $.apostrophe.getParts(this.value, charIndex);
 
     // Does the current word look like a name?
-    var looksLikeName = /^[A-Z]/.test(currentWord) &&
-      currentWord.length >= config.minimalLength;
+    var looksLikeName = /^[A-Z]/.test(parts.word) &&
+      parts.word.length >= config.minimalLength;
 
     // Are there names that ressemble it?
     var potentialNames = _.filter(_.keys(config.people), function(name){
       return _.any(name.split(' '), function(partOfName){
 
-        // If currentWord is a perfect match of the beggining
-        // of partOfName, pass, otherwise, try a levenshtein distance
-        return (new RegExp('^' + currentWord)).test(partOfName) ||
-          _.str.levenshtein(currentWord, partOfName) <= config.levenshtein;
+        var isMatch       = (new RegExp('^' + parts.word)).test(partOfName),
+            isLevenshtein = _.str.levenshtein(parts.word, partOfName) <= config.levenshtein;
+
+        return isMatch || isLevenshtein;
 
       });
     });
 
-    if ( looksLikeName && potentialNames.length > 0 ) {
-
-      /*
-      HERE WILL GO THE DROPDOWN PART.
-      FOR DEVELOPMENT PURPOSES, WE ASSUME THAT THE USER CHOSE THE FIRST RESULT
-      */
-      var selectedName = potentialNames[0];
-
-      // DEVELOPMENT: DO ONLY ONE MATCHING BY PAGELOAD
-      if(typeof first !== "undefined") return; first = true;
-
-      // Update source and mirror text (currently flawed).
-      this.value = textBefore + selectedName + textAfter;
-      var html_value = textBefore + '<b>' + selectedName + '</b>' + textAfter;
-
-      // Place the text caret after the mentionned name
-      var newCaretPos = textBefore.length + selectedName.length;
-      this.setSelectionRange(newCaretPos, newCaretPos);
-
-    }
+    if ( looksLikeName && potentialNames.length > 0 )
+      var html = $.apostrophe.placeName.call(this,
+        potentialNames[0], parts.before, parts.after);
 
     // Push HTML-linebreaked content to the mirror
-    this.mirror.innerHTML = html_value || this.value.replace(/\n/g, "<br/>");
+    this.mirror.innerHTML = html || this.value.replace(/\n/g, "<br/>");
+
+  };
+
+  $.apostrophe.getParts = function(content, charIndex) {
+
+    var before  = content.substr(0, charIndex),
+        after   = content.substr(charIndex);
+
+    var leftPart = '', rightPart = '';
+
+    for (var i = before.length - 1; i > 0; i--) {
+      if (/\s/g.test(before[i])) {
+        before = before.slice(0, i + 1); break;
+      } else leftPart = before[i] + leftPart;
+    }
+
+    for (var j = 0; j < after.length; j++) {
+      if (/\s/g.test(after[j])) {
+        after = after.slice(j, after.length); break;
+      } else rightPart += after[j];
+    }
+
+    return { before: before, word: leftPart + rightPart, after: after };
+
+  };
+
+  $.apostrophe.placeName = function (selectedName, before, after) {
+
+    // DEVELOPMENT: DO ONLY ONE MATCHING BY PAGELOAD
+    if(typeof first !== "undefined") return; first = true;
+
+    // Update textarea with selected name
+    this.value = before + selectedName + after;
+
+    // Place the text caret after the mentionned name
+    var newCaretPos = before.length + selectedName.length;
+    this.setSelectionRange(newCaretPos, newCaretPos);
+
+    // Return formatted content to mirror
+    return before + '<b>' + selectedName + '</b>' + after;
 
   };
 
