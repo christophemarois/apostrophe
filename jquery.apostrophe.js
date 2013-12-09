@@ -113,7 +113,7 @@
       parts.word.length >= config.minimalLength;
 
     // Are there names that ressemble it?
-    var potentialNames = _.filter(_.keys(config.people), function(name){
+    var potentialNames = _.filter(_.keys(config.names), function(name){
       return _.any(name.split(' '), function(partOfName){
 
         var isMatch       = (new RegExp('^' + parts.word)).test(partOfName),
