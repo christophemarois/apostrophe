@@ -17,16 +17,17 @@
 
     <script type="text/javascript">
 
-      var names = {
-        'Jeanne Marceau':     {},
-        'Jonathan Hershon':   {},
-        'Christophe Marois':  {},
-        'Christine Marois':   {},
-        'Laszlo Ricciardi':   {}
-      };
+      var people = [
+        { name: 'Jeanne Marceau'                      },
+        { name: 'Jeanne Dupuis'                       },
+        { name: 'Jonathan Hershon'                    },
+        { name: 'Christophe Marois'                   },
+        { name: 'Laszlo Ricciardi'                    },
+        { name: 'Francesco Biondi-Morra di Belforte'  }
+      ];
 
       $(function(){
-        $('#apostrophed').apostrophe({ names: names });
+        $('#apostrophed').apostrophe({ people: people });
       });
 
     </script>

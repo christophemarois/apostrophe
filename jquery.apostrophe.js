@@ -7,9 +7,6 @@
 
   $.apostrophe = {};
 
-  // Mixin string functions to underscore
-  _.mixin(_.str.exports());
-
   // Default config
   $.apostrophe.config = {
 
@@ -23,6 +20,7 @@
     // How close to a name should the levenshtein distance be
     // to be considered as a possibility?
     // From 0 to 2, 0 being exact maching and 2 being permissive.
+    // NOTE: REQUIRES UNDERSCORE.JS STRING EXTENSIONS TO BE LOADED
     levenshtein: 1,
 
     // Computed textarea styles that have to be copied to the mirror.
@@ -76,18 +74,18 @@
           .css(style).appendTo('body');
 
         // Initialize element DOM properties
-        el.mentionned = {};
+        el.mentionned = [];
         el.config     = config;
         el.mirror     = $mirror.get(0);
 
         $el
           // Update event
-          .on(config.eventHandlers, $.apostrophe.updateAndCheck)
+          .on(config.eventHandlers, $.apostrophe.update)
 
           // Destroy event
           .on('apostrophe.destroy', function(){
             $el
-              .off(config.eventHandlers, $.apostrophe.updateAndCheck)
+              .off(config.eventHandlers, $.apostrophe.update)
               .removeProp('mirror');
             $mirror.remove();
           });
@@ -100,7 +98,18 @@
   };
 
   // Update mirror and check for mentionned names.
-  $.apostrophe.updateAndCheck = function(e) {
+  $.apostrophe.update = function(e) {
+
+    var config = this.config;
+
+    $.apostrophe.checkForNames.call(this);
+
+    // Push HTML-linebreaked content to the mirror
+    this.mirror.innerHTML = html || this.value.replace(/\n/g, "<br/>");
+
+  };
+
+  $.apostrophe.checkForNames = function(){
 
     var config = this.config;
 
@@ -113,11 +122,13 @@
       parts.word.length >= config.minimalLength;
 
     // Are there names that ressemble it?
-    var potentialNames = _.filter(_.keys(config.names), function(name){
-      return _.any(name.split(' '), function(partOfName){
+    var potentialPeople = _.filter(config.people, function(person){
+      return _.any(person.name.split(' '), function(partOfName){
 
         var isMatch       = (new RegExp('^' + parts.word)).test(partOfName),
-            isLevenshtein = _.str.levenshtein(parts.word, partOfName) <= config.levenshtein;
+            isLevenshtein = _.isObject(_.str) ?
+              _.str.levenshtein(parts.word, partOfName) <= config.levenshtein :
+              false;
 
         return isMatch || isLevenshtein;
 
@@ -125,15 +136,35 @@
     });
 
     // DEVELOPMENT: AUTOMATICALLY PUT FIRST RESULT
-    if ( looksLikeName && potentialNames.length > 0 )
-      var html = $.apostrophe.placeName.call(this,
-        potentialNames[0], parts.before, parts.after);
-
-    // Push HTML-linebreaked content to the mirror
-    this.mirror.innerHTML = html || this.value.replace(/\n/g, "<br/>");
+    return looksLikeName && potentialPeople.length ?
+      $.apostrophe.placeName.call(this, potentialPeople[0], parts.before, parts.after) :
+      false;
 
   };
 
+  $.apostrophe.placeName = function (selectedPerson, before, after) {
+
+    // DEVELOPMENT: DO ONLY ONE MATCHING BY PAGELOAD
+    //if(typeof first !== "undefined") return; first = true;
+
+    // Update textarea with selected name
+    this.value = before + selectedPerson.name + after;
+
+    // Pass the mentionned name from the names to the mentionned list
+    this.mentionned.push( _.extend(selectedPerson, { pos: before.length }) );
+    this.config.people = _.reject(this.config.people, function(person){
+      return person.name == selectedPerson.name;
+    });
+
+    // Place the text caret after the mentionned name
+    var newCaretPos = before.length + selectedPerson.name.length;
+    this.setSelectionRange(newCaretPos, newCaretPos);
+
+  };
+
+  // Given a string 'content', and an index in it 'charIndex',
+  // Will return the current word 'word', the string before it,
+  // 'before', and the string after it 'after'.
   $.apostrophe.getParts = function(content, charIndex) {
 
     var before  = content.substr(0, charIndex),
@@ -154,30 +185,6 @@
     }
 
     return { before: before, word: leftPart + rightPart, after: after };
-
-  };
-
-  $.apostrophe.placeName = function (selectedName, before, after) {
-
-    // DEVELOPMENT: DO ONLY ONE MATCHING BY PAGELOAD
-    if(typeof first !== "undefined") return; first = true;
-
-    // Update textarea with selected name
-    this.value = before + selectedName + after;
-
-    // Pass the mentionned name from the names to the mentionned list
-    this.mentionned[selectedName] = this.config.names[selectedName];
-    this.config.names = _.omit(this.config.names, selectedName);
-
-    // Add the index of the name's beginning to the object
-    this.mentionned[selectedName].pos = before.length;
-
-    // Place the text caret after the mentionned name
-    var newCaretPos = before.length + selectedName.length;
-    this.setSelectionRange(newCaretPos, newCaretPos);
-
-    // Return formatted content to mirror
-    return before + '<b>' + selectedName + '</b>' + after;
 
   };
 
