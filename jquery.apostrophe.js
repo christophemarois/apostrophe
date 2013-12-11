@@ -102,20 +102,38 @@
 
     var config = this.config;
 
-    $.apostrophe.checkForNames.call(this);
+    // Deduce text caret position index
+    var charIndex = this.selectionStart <= 0 ? 0 : this.selectionStart;
+
+    // Check if any name has been inputted
+    $.apostrophe.checkForNames.call(this, charIndex);
+
+    // Add the highlight tags to every mentionned name
+    var html = this.value;
+    _.each(_.flatten(_.indexBy(this.mentionned, 'pos')), function(person, i) {
+
+      // 7 characters are added by "<b></b>"
+      var nameIndex = person.pos + i * 7;
+
+      html = [
+        html.slice(0, nameIndex),
+        '<b>' + person.name + '</b>',
+        html.slice(nameIndex + person.name.length)
+      ].join('');
+
+    });
 
     // Push HTML-linebreaked content to the mirror
     this.mirror.innerHTML = html || this.value.replace(/\n/g, "<br/>");
 
   };
 
-  $.apostrophe.checkForNames = function(){
+  $.apostrophe.checkForNames = function(charIndex){
 
     var config = this.config;
 
     // Get current word with enclosing text at caret position
-    var charIndex = this.selectionStart <= 0 ? 0 : this.selectionStart,
-        parts     = $.apostrophe.getParts(this.value, charIndex);
+    var parts = $.apostrophe.getParts(this.value, charIndex);
 
     // Does the current word look like a name?
     var looksLikeName = /^[A-Z]/.test(parts.word) &&
@@ -159,6 +177,8 @@
     // Place the text caret after the mentionned name
     var newCaretPos = before.length + selectedPerson.name.length;
     this.setSelectionRange(newCaretPos, newCaretPos);
+
+    return true;
 
   };
 
