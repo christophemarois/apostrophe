@@ -100,31 +100,60 @@
   // Update mirror and check for mentionned names.
   $.apostrophe.update = function(e) {
 
-    var config = this.config;
+    //console.log(e);
 
-    // Deduce text caret position index
-    var charIndex = this.selectionStart <= 0 ? 0 : this.selectionStart;
+    var _this     = this,
+        config    = this.config,
+        charIndex = this.selectionStart <= 0 ? 0 : this.selectionStart;
+
+    // Is a mention being edited?
+    var overlapping = _.find(this.mentionned, function(person){
+      return charIndex >= person.pos &&
+        charIndex < person.pos + person.name.length;
+    });
+
+    // If it is, remove it.
+    if (overlapping) {
+
+      // Pass the mentionned name from the names to the people list
+      this.config.people.push(overlapping);
+      this.mentionned = _.reject(this.mentionned, function(person){
+        return person.name == overlapping.name;
+      });
+
+    // If it isn't, push the further ones.
+    } else {
+
+      var furtherPeople = _.filter(this.mentionned, function(person){
+        return person.pos > charIndex;
+      });
+
+      _.each(furtherPeople, function(person){ person.pos++; });
+
+    }
 
     // Check if any name has been inputted
-    $.apostrophe.checkForNames.call(this, charIndex);
+    $.apostrophe.checkForNames.call(_this, charIndex);
 
     // Add the highlight tags to every mentionned name
-    var html = this.value;
+    var formatted_content = this.value;
+
     _.each(_.flatten(_.indexBy(this.mentionned, 'pos')), function(person, i) {
 
-      // 7 characters are added by "<b></b>"
+      // 7 characters are added by "<b></b>". We add them linearly
+      // following the sorted mentions index order, thus: i * 7
       var nameIndex = person.pos + i * 7;
 
-      html = [
-        html.slice(0, nameIndex),
+      formatted_content = [
+        formatted_content.slice(0, nameIndex),
         '<b>' + person.name + '</b>',
-        html.slice(nameIndex + person.name.length)
+        formatted_content.slice(nameIndex + person.name.length)
       ].join('');
 
     });
 
     // Push HTML-linebreaked content to the mirror
-    this.mirror.innerHTML = html || this.value.replace(/\n/g, "<br/>");
+    this.mirror.innerHTML = formatted_content.replace(/\n/g, "<br/>");
 
   };
 
@@ -153,6 +182,7 @@
       });
     });
 
+    // If there are resembling names, trigger dropdown.
     // DEVELOPMENT: AUTOMATICALLY PUT FIRST RESULT
     return looksLikeName && potentialPeople.length ?
       $.apostrophe.placeName.call(this, potentialPeople[0], parts.before, parts.after) :
@@ -161,9 +191,6 @@
   };
 
   $.apostrophe.placeName = function (selectedPerson, before, after) {
-
-    // DEVELOPMENT: DO ONLY ONE MATCHING BY PAGELOAD
-    //if(typeof first !== "undefined") return; first = true;
 
     // Update textarea with selected name
     this.value = before + selectedPerson.name + after;
