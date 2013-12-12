@@ -108,8 +108,8 @@
 
     // Is a mention being edited?
     var overlapping = _.find(this.mentionned, function(person){
-      return charIndex >= person.pos &&
-        charIndex < person.pos + person.name.length;
+      return charIndex > person.pos + 1 &&
+        charIndex <= person.pos + person.name.length;
     });
 
     // If it is, remove it.
@@ -125,7 +125,7 @@
     } else {
 
       var furtherPeople = _.filter(this.mentionned, function(person){
-        return person.pos > charIndex;
+        return person.pos >= charIndex - 1 ;
       });
 
       _.each(furtherPeople, function(person){ person.pos++; });
@@ -191,6 +191,8 @@
   };
 
   $.apostrophe.placeName = function (selectedPerson, before, after) {
+
+    if(typeof first !== "undefined") return; first = true;
 
     // Update textarea with selected name
     this.value = before + selectedPerson.name + after;
