@@ -7,7 +7,6 @@
 
 # TODO
 
-* select+delete and paste
 * Mirror overflow (allows apostrophe to be used without an autogrow plugin)
 * Selection popup
 
@@ -114,13 +113,13 @@
         charIndex   = this.selectionStart <= 0 ? 0 : this.selectionStart,
         charDiff    = this.value.length - this.charCount;
 
-    // Update charCount counter now that we now charDiff
+    // Update charCount now that we now charDiff
     this.charCount = this.value.length;
 
     // Has a mention been severed?
     var overlapping = _.find(this.mentionned, function(person){
-      return charIndex > person.pos + 1 &&
-        charIndex < person.pos + person.name.length;
+      return charIndex - charDiff > person.pos &&
+        charIndex - charDiff < person.pos + person.name.length;
     });
 
     // If it is, remove the mention.
@@ -136,7 +135,7 @@
 
       // If no mention has been severed, push the next positions.
       var furtherPeople = _.filter(this.mentionned, function(person){
-        return person.pos >= charIndex - 1 ;
+        return person.pos >= charIndex - charDiff ;
       });
       _.each(furtherPeople, function(person){ person.pos = person.pos + charDiff; });
 
@@ -206,6 +205,9 @@
     // Update textarea with selected name
     this.value = before + selectedPerson.name + after;
 
+    // Update charCount
+    this.charCount = this.value.length;
+
     // Pass the mentionned name from the names to the mentionned list
     this.mentionned.push( _.extend(selectedPerson, { pos: before.length }) );
     this.config.people = _.reject(this.config.people, function(person){
@@ -242,11 +244,7 @@
       } else rightPart += after[j];
     }
 
-    return {
-      word: leftPart + rightPart,
-      before: before,
-      after: after
-    };
+    return { word: leftPart + rightPart, before: before, after: after };
 
   };
 

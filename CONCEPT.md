@@ -6,9 +6,9 @@ Apostrophe should obey this set of rules:
     a. The capital is preceded by a space or the capital is the first character.
     b. The capital is the last character or the capital is followed by a space.
 
-2. After selecting a mention by hitting ENTER or TAB, the mentionned name is turned into a highlighted element in the textarea, without adding spaces before or after it.
+2. After selecting a mention by hitting ENTER or TAB, the mentionned name is turned into a highlighted element in the textarea, **without adding spaces before or after it**.
 
-3. Modifying a mentionned name (by copy-pasting, cutting or backspacing) will try to keep the most parts of it, sequentially comparing parts of a name (by splitting with spaces). Examples:
+3. After modifying a mentionned name, apostrophe will try to keep the most parts of it, sequentially comparing parts of a name (by splitting with spaces). Examples:
     a. `Alex John James` will become `Alex John` if the `James` part is modified.
     b. `Alex John James` will become `Alex` if the the `John` part is modified
 
