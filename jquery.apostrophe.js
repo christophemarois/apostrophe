@@ -3,6 +3,16 @@
 // (c) Syme (git @ symeapp)
 // Released under the MIT license
 
+/*
+
+# TODO
+
+* select+delete and paste
+* Mirror overflow (allows apostrophe to be used without an autogrow plugin)
+* Selection popup
+
+*/
+
 (function($, _) {
 
   $.apostrophe = {};
@@ -75,14 +85,13 @@
 
         // Initialize element DOM properties
         el.mentionned = [];
+        el.charCount  = el.value.length;
         el.config     = config;
         el.mirror     = $mirror.get(0);
 
+        // Bind events
         $el
-          // Update event
           .on(config.eventHandlers, $.apostrophe.update)
-
-          // Destroy event
           .on('apostrophe.destroy', function(){
             $el
               .off(config.eventHandlers, $.apostrophe.update)
@@ -100,19 +109,21 @@
   // Update mirror and check for mentionned names.
   $.apostrophe.update = function(e) {
 
-    //console.log(e);
+    var _this       = this,
+        config      = this.config,
+        charIndex   = this.selectionStart <= 0 ? 0 : this.selectionStart,
+        charDiff    = this.value.length - this.charCount;
 
-    var _this     = this,
-        config    = this.config,
-        charIndex = this.selectionStart <= 0 ? 0 : this.selectionStart;
+    // Update charCount counter now that we now charDiff
+    this.charCount = this.value.length;
 
-    // Is a mention being edited?
+    // Has a mention been severed?
     var overlapping = _.find(this.mentionned, function(person){
       return charIndex > person.pos + 1 &&
-        charIndex <= person.pos + person.name.length;
+        charIndex < person.pos + person.name.length;
     });
 
-    // If it is, remove it.
+    // If it is, remove the mention.
     if (overlapping) {
 
       // Pass the mentionned name from the names to the people list
@@ -121,23 +132,21 @@
         return person.name == overlapping.name;
       });
 
-    // If it isn't, push the further ones.
     } else {
 
+      // If no mention has been severed, push the next positions.
       var furtherPeople = _.filter(this.mentionned, function(person){
         return person.pos >= charIndex - 1 ;
       });
-
-      _.each(furtherPeople, function(person){ person.pos++; });
+      _.each(furtherPeople, function(person){ person.pos = person.pos + charDiff; });
 
     }
 
     // Check if any name has been inputted
     $.apostrophe.checkForNames.call(_this, charIndex);
 
-    // Add the highlight tags to every mentionned name
+    // Add the highlight tags in the mirror copy
     var formatted_content = this.value;
-
     _.each(_.flatten(_.indexBy(this.mentionned, 'pos')), function(person, i) {
 
       // 7 characters are added by "<b></b>". We add them linearly
@@ -192,7 +201,7 @@
 
   $.apostrophe.placeName = function (selectedPerson, before, after) {
 
-    if(typeof first !== "undefined") return; first = true;
+    // if(typeof first !== "undefined") return; first = true;
 
     // Update textarea with selected name
     this.value = before + selectedPerson.name + after;
@@ -212,8 +221,8 @@
   };
 
   // Given a string 'content', and an index in it 'charIndex',
-  // Will return the current word 'word', the string before it,
-  // 'before', and the string after it 'after'.
+  // Will return the current word, the string before it, and
+  // the string after it.
   $.apostrophe.getParts = function(content, charIndex) {
 
     var before  = content.substr(0, charIndex),
@@ -233,7 +242,11 @@
       } else rightPart += after[j];
     }
 
-    return { before: before, word: leftPart + rightPart, after: after };
+    return {
+      word: leftPart + rightPart,
+      before: before,
+      after: after
+    };
 
   };
 
