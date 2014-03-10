@@ -7,8 +7,20 @@
 
 # TODO
 
-* Mirror overflow (allows apostrophe to be used without an autogrow plugin)
-* Selection popup
+## High priority
+
+* Selection popup & templates
+* Partial and complete severing of tags support
+
+## Normal priority
+
+* Mirror overflow (allows usage without textarea autogrow)
+* Replace levenshtein by more efficient fuzzy text searching
+* Store previous textarea content to allow "undo"
+
+## Low priority
+
+* Partial tags (e.g. Jonny Appleseed => Jonny)
 
 */
 
@@ -47,6 +59,16 @@
       BACKSPACE:  8 , TAB:   9 ,  COMMA: 188,  SPACE:  32,
       RETURN:     13, ESC:   27,  LEFT:  37 ,  UP:     38,
       RIGHT:      39, DOWN:  40
+    },
+
+    templates: {
+      popup: _.template(
+        '<ul>' +
+          '<% _.each(people, function(person) { %>' +
+            '<li data-id="<%= person.id %>"><%= person.name %></li>' +
+          '<% }); %>' +
+        '</ul>'
+      )
     }
 
   };
@@ -56,6 +78,9 @@
 
     // Extend global config with config arguments
     var config = $.extend($.apostrophe.config, config || {});
+
+    // Add unique IDs to people
+    _.each(config.people, function(person){ person.id = _.uniqueId(); });
 
     this
       // Keep only uninitialized textareas
@@ -91,9 +116,11 @@
         // Bind events
         $el
           .on(config.eventHandlers, $.apostrophe.update)
+          .on('apostrophe.update', $.apostrophe.update)
           .on('apostrophe.destroy', function(){
             $el
               .off(config.eventHandlers, $.apostrophe.update)
+              .off('apostrophe.update')
               .removeProp('mirror');
             $mirror.remove();
           });
@@ -108,16 +135,15 @@
   // Update mirror and check for mentionned names.
   $.apostrophe.update = function(e) {
 
-    var _this       = this,
-        config      = this.config,
-        charIndex   = this.selectionStart <= 0 ? 0 : this.selectionStart,
-        charDiff    = this.value.length - this.charCount;
+    var el            = this,
+        charIndex     = el.selectionStart <= 0 ? 0 : el.selectionStart,
+        charDiff      = el.value.length - el.charCount;
 
     // Update charCount now that we now charDiff
-    this.charCount = this.value.length;
+    el.charCount = el.value.length;
 
     // Has a mention been severed?
-    var overlapping = _.find(this.mentionned, function(person){
+    var overlapping = _.find(el.mentionned, function(person){
       return charIndex - charDiff > person.pos &&
         charIndex - charDiff < person.pos + person.name.length;
     });
@@ -126,27 +152,47 @@
     if (overlapping) {
 
       // Pass the mentionned name from the names to the people list
-      this.config.people.push(overlapping);
-      this.mentionned = _.reject(this.mentionned, function(person){
+      el.config.people.push(overlapping);
+      el.mentionned = _.reject(el.mentionned, function(person){
         return person.name == overlapping.name;
       });
 
     } else {
 
-      // If no mention has been severed, push the next positions.
-      var furtherPeople = _.filter(this.mentionned, function(person){
-        return person.pos >= charIndex - charDiff ;
+      // Have mentions been deleted in a batch delete?
+      var deleted = charDiff < 0 && _.find(el.mentionned, function(person){
+        return person.pos > charIndex &&
+          person.pos + person.name.length < charIndex + Math.abs(charDiff)
       });
-      _.each(furtherPeople, function(person){ person.pos = person.pos + charDiff; });
+
+      if (deleted) {
+
+        // Pass the mentionned name from the names to the people list
+        el.config.people.push(deleted);
+        el.mentionned = _.reject(el.mentionned, function(person){
+          return person.name == deleted.name;
+        });
+
+        if (deleted) console.log('MENTION DELETED IN BATCH DELETE')
+
+      } else {
+
+        // If no mention has been severed, push the next positions.
+        var furtherPeople = _.filter(el.mentionned, function(person){
+          return person.pos >= charIndex - charDiff ;
+        });
+        _.each(furtherPeople, function(person){ person.pos = person.pos + charDiff; });
+
+      }
 
     }
 
     // Check if any name has been inputted
-    $.apostrophe.checkForNames.call(_this, charIndex);
+    $.apostrophe.checkForNames.call(el, charIndex);
 
     // Add the highlight tags in the mirror copy
-    var formatted_content = this.value;
-    _.each(_.flatten(_.indexBy(this.mentionned, 'pos')), function(person, i) {
+    var formatted_content = el.value;
+    _.each(_.flatten(_.indexBy(el.mentionned, 'pos')), function(person, i) {
 
       // 7 characters are added by "<b></b>". We add them linearly
       // following the sorted mentions index order, thus: i * 7
@@ -161,28 +207,32 @@
     });
 
     // Push HTML-linebreaked content to the mirror
-    this.mirror.innerHTML = formatted_content.replace(/\n/g, "<br/>");
+    el.mirror.innerHTML = formatted_content.replace(/\n/g, "<br/>");
 
   };
 
   $.apostrophe.checkForNames = function(charIndex){
 
-    var config = this.config;
+    var el = this;
 
     // Get current word with enclosing text at caret position
     var parts = $.apostrophe.getParts(this.value, charIndex);
 
     // Does the current word look like a name?
-    var looksLikeName = /^[A-Z]/.test(parts.word) &&
-      parts.word.length >= config.minimalLength;
+    var looksLikeName = // /^[A-Z]/.test(parts.word) &&
+      parts.word.length >= el.config.minimalLength;
 
     // Are there names that ressemble it?
-    var potentialPeople = _.filter(config.people, function(person){
+    var potentialPeople = _.filter(el.config.people, function(person){
       return _.any(person.name.split(' '), function(partOfName){
 
-        var isMatch       = (new RegExp('^' + parts.word)).test(partOfName),
+        // Prepare parts for match testing
+        var a = parts.word.toLowerCase(),
+            b = partOfName.toLowerCase();
+
+        var isMatch       = (new RegExp('^' + a)).test(b),
             isLevenshtein = _.isObject(_.str) ?
-              _.str.levenshtein(parts.word, partOfName) <= config.levenshtein :
+              _.str.levenshtein(a, b) <= el.config.levenshtein :
               false;
 
         return isMatch || isLevenshtein;
@@ -191,10 +241,26 @@
     });
 
     // If there are resembling names, trigger dropdown.
-    // DEVELOPMENT: AUTOMATICALLY PUT FIRST RESULT
-    return looksLikeName && potentialPeople.length ?
-      $.apostrophe.placeName.call(this, potentialPeople[0], parts.before, parts.after) :
-      false;
+    // DEVELOPMENT: TO REFACTOR
+
+    if ( looksLikeName && potentialPeople.length > 0 ) {
+
+      var popup_template = el.config.templates.popup({ people: potentialPeople });
+      $('#popup-container').html(popup_template);
+
+      $('#popup-container li').click(function(){
+        var personId  = $(this).data('id').toString(),
+            person    = _.findWhere(el.config.people, { id: personId });
+        $.apostrophe.placeName.call(el, person, parts.before, parts.after);
+      });
+
+    } else {
+      $('#popup-container').html('');
+    }
+
+    //return looksLikeName && potentialPeople.length ?
+    //  $.apostrophe.placeName.call(this, potentialPeople[0], parts.before, parts.after) :
+    //  false;
 
   };
 
@@ -202,21 +268,26 @@
 
     // if(typeof first !== "undefined") return; first = true;
 
+    var el = this;
+
     // Update textarea with selected name
-    this.value = before + selectedPerson.name + after;
+    el.value = before + selectedPerson.name + after;
 
     // Update charCount
-    this.charCount = this.value.length;
+    el.charCount = el.value.length;
 
     // Pass the mentionned name from the names to the mentionned list
-    this.mentionned.push( _.extend(selectedPerson, { pos: before.length }) );
-    this.config.people = _.reject(this.config.people, function(person){
+    el.mentionned.push( _.extend(selectedPerson, { pos: before.length }) );
+    el.config.people = _.reject(el.config.people, function(person){
       return person.name == selectedPerson.name;
     });
 
     // Place the text caret after the mentionned name
     var newCaretPos = before.length + selectedPerson.name.length;
-    this.setSelectionRange(newCaretPos, newCaretPos);
+    el.setSelectionRange(newCaretPos, newCaretPos);
+
+    // Update the textarea
+    $(el).trigger('apostrophe.update');
 
     return true;
 
@@ -257,12 +328,15 @@
     if (typeof props === "string") props = [props];
 
     $.each(props, function(i, prop) {
-      if (el.currentStyle)
+      if (el.currentStyle) {
         results[prop] = el.currentStyle[prop];
-      else if (window.getComputedStyle)
+      } else if (window.getComputedStyle) {
         results[prop] = document.defaultView
           .getComputedStyle(el, null)
           .getPropertyValue(prop);
+      } else {
+        results[prop] = $(el).css(prop);
+      }
     });
 
     return results;

@@ -17,17 +17,19 @@
 
     <script type="text/javascript">
 
-      var people = [
-        { name: 'Jeanne Marceau'                      },
-        { name: 'Jeanne Dupuis'                       },
-        { name: 'Jonathan Hershon'                    },
-        { name: 'Christophe Marois'                   },
-        { name: 'Laszlo Ricciardi'                    },
-        { name: 'Francesco Biondi-Morra di Belforte'  }
-      ];
-
       $(function(){
+
+        var people = [
+          { name: 'Jeanne Marceau'                      },
+          { name: 'Jeanne Dupuis'                       },
+          { name: 'Jonathan Hershon'                    },
+          { name: 'Christophe Marois'                   },
+          { name: 'Laszlo Ricciardi'                    },
+          { name: 'Francesco Biondi-Morra di Belforte'  }
+        ];
+
         $('#apostrophed').apostrophe({ people: people });
+
       });
 
     </script>
@@ -67,5 +69,6 @@
   </head>
   <body>
     <textarea id="apostrophed" placeholder="Type here"></textarea>
+    <div id="popup-container"></div>
   </body>
 </html>
