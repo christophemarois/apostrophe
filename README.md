@@ -7,7 +7,7 @@ _apostrophe_ is a mention system that's tailored to use
 mentions system. That means you dealing with `Jonny Appleseed`
 instead of `@jonny_appleseed32`. No triggering characters.
 
-## To be done before stable release:
+### To be done before stable release:
 
 * Update name lookup when manually changing cursor position (arrows or click)
 * Undo and cut support
@@ -16,11 +16,7 @@ instead of `@jonny_appleseed32`. No triggering characters.
 * Mirror overflow (allows usage without textarea autogrow)
 * Replace levenshtein by more efficient fuzzy text searching
 
-## To be
-
+### To be done eventually
 
 * Optional triggering chars
-
-### Low priority
-
 * Partial tags on deletion (e.g. Jonny Appleseed => Jonny)
