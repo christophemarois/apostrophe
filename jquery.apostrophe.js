@@ -7,20 +7,24 @@
 
 # TODO
 
+
 ## High priority
 
 * Selection popup & templates
-* Partial and complete severing of tags support
+* Undo and cut support
+* Bug: deletion of mention that starts at content's beggining
+  or ends at content's end often fails
 
 ## Normal priority
 
+* Optional triggering chars
 * Mirror overflow (allows usage without textarea autogrow)
 * Replace levenshtein by more efficient fuzzy text searching
 * Store previous textarea content to allow "undo"
 
 ## Low priority
 
-* Partial tags (e.g. Jonny Appleseed => Jonny)
+* Partial tags on  (e.g. Jonny Appleseed => Jonny)
 
 */
 
@@ -142,50 +146,59 @@
     // Update charCount now that we now charDiff
     el.charCount = el.value.length;
 
-    // Has a mention been severed?
-    var overlapping = _.find(el.mentionned, function(person){
-      return charIndex - charDiff > person.pos &&
-        charIndex - charDiff < person.pos + person.name.length;
-    });
+    // If characters have been added, check if a mention
+    // has been severed.
+    if ( charDiff >= 0 ) {
 
-    // If it is, remove the mention.
-    if (overlapping) {
-
-      // Pass the mentionned name from the names to the people list
-      el.config.people.push(overlapping);
-      el.mentionned = _.reject(el.mentionned, function(person){
-        return person.name == overlapping.name;
+      // Has a mention been severed?
+      var overlappingPerson = _.find(el.mentionned, function(person){
+        return charIndex - charDiff > person.pos &&
+          charIndex - charDiff < person.pos + person.name.length;
       });
 
-    } else {
-
-      // Have mentions been deleted in a batch delete?
-      var deleted = charDiff < 0 && _.find(el.mentionned, function(person){
-        return person.pos > charIndex &&
-          person.pos + person.name.length < charIndex + Math.abs(charDiff)
-      });
-
-      if (deleted) {
-
-        // Pass the mentionned name from the names to the people list
-        el.config.people.push(deleted);
-        el.mentionned = _.reject(el.mentionned, function(person){
-          return person.name == deleted.name;
+      // If it is the case, pass the mentionned name from
+      // the names to the people list
+      if (overlappingPerson) {
+        el.config.people.push(overlappingPerson);
+        el.mentionned = _.reject(el.mentionned, function(p){
+          return p.name == overlappingPerson.name;
         });
-
-        if (deleted) console.log('MENTION DELETED IN BATCH DELETE')
-
-      } else {
-
-        // If no mention has been severed, push the next positions.
-        var furtherPeople = _.filter(el.mentionned, function(person){
-          return person.pos >= charIndex - charDiff ;
-        });
-        _.each(furtherPeople, function(person){ person.pos = person.pos + charDiff; });
-
       }
 
+    // If characters have been deleted, check if one or
+    // several mentions have been severed.
+    } else {
+
+      var oldPos = charIndex - charDiff,
+          newPos = charIndex;
+
+      _.any(el.mentionned, function(person) {
+
+        var nameStart = person.pos,
+            nameEnd   = person.pos + person.name.length;
+
+        var isSevered =
+          (newPos < nameStart && oldPos > nameStart && oldPos < nameEnd) || // left
+          (newPos > nameStart && newPos < nameEnd && oldPos > nameEnd) || // right
+          (newPos >= nameStart && oldPos <= nameEnd) || // inside
+          (newPos < nameStart && oldPos > nameEnd); // outside
+
+        if (isSevered) {
+          el.config.people.push(person);
+          el.mentionned = _.reject(el.mentionned, function(p){
+            return p.name == person.name;
+          });
+        }
+
+      });
+
     }
+
+    // Update positions
+    var furtherPeople = _.filter(el.mentionned, function(person){
+      return person.pos >= charIndex - charDiff ;
+    });
+    _.each(furtherPeople, function(person){ person.pos = person.pos + charDiff; });
 
     // Check if any name has been inputted
     $.apostrophe.checkForNames.call(el, charIndex);
@@ -251,30 +264,36 @@
       $('#popup-container li').click(function(){
         var personId  = $(this).data('id').toString(),
             person    = _.findWhere(el.config.people, { id: personId });
-        $.apostrophe.placeName.call(el, person, parts.before, parts.after);
+        $.apostrophe.placeName.call(el, person, parts);
       });
 
     } else {
       $('#popup-container').html('');
     }
 
-    //return looksLikeName && potentialPeople.length ?
-    //  $.apostrophe.placeName.call(this, potentialPeople[0], parts.before, parts.after) :
-    //  false;
-
   };
 
-  $.apostrophe.placeName = function (selectedPerson, before, after) {
-
-    // if(typeof first !== "undefined") return; first = true;
+  $.apostrophe.placeName = function (selectedPerson, parts) {
 
     var el = this;
+
+    var before  = parts.before,
+        word    = parts.word,
+        after   = parts.after;
 
     // Update textarea with selected name
     el.value = before + selectedPerson.name + after;
 
     // Update charCount
     el.charCount = el.value.length;
+
+    // Push further mentionned people
+    var furtherPeople = _.filter(el.mentionned, function(person){
+      return person.pos >= before.length ;
+    });
+    _.each(furtherPeople, function(person){
+      person.pos = person.pos - word.length + selectedPerson.name.length;
+    });
 
     // Pass the mentionned name from the names to the mentionned list
     el.mentionned.push( _.extend(selectedPerson, { pos: before.length }) );
@@ -303,10 +322,10 @@
 
     var leftPart = '', rightPart = '';
 
-    for (var i = before.length - 1; i > 0; i--) {
-      if (/\s/g.test(before[i])) {
-        before = before.slice(0, i + 1); break;
-      } else leftPart = before[i] + leftPart;
+    for (var i = before.length; i > 0; i--) {
+      if (/\s/g.test(before[i - 1])) {
+        before = before.slice(0, i); break;
+      } else leftPart = before[i - 1] + leftPart;
     }
 
     for (var j = 0; j < after.length; j++) {
@@ -315,7 +334,10 @@
       } else rightPart += after[j];
     }
 
-    return { word: leftPart + rightPart, before: before, after: after };
+    var word = leftPart + rightPart;
+    if (before == word) before = "";
+
+    return { before: before, word: word, after: after };
 
   };
 
