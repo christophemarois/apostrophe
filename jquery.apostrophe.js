@@ -3,31 +3,6 @@
 // (c) Syme (git @ symeapp)
 // Released under the MIT license
 
-/*
-
-# TODO
-
-
-## High priority
-
-* Selection popup & templates
-* Undo and cut support
-* Bug: deletion of mention that starts at content's beggining
-  or ends at content's end often fails
-
-## Normal priority
-
-* Optional triggering chars
-* Mirror overflow (allows usage without textarea autogrow)
-* Replace levenshtein by more efficient fuzzy text searching
-* Store previous textarea content to allow "undo"
-
-## Low priority
-
-* Partial tags on  (e.g. Jonny Appleseed => Jonny)
-
-*/
-
 (function($, _) {
 
   $.apostrophe = {};
