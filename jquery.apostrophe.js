@@ -17,12 +17,6 @@
     // potential name?
     minimalLength: 3,
 
-    // How close to a name should the levenshtein distance be
-    // to be considered as a possibility?
-    // From 0 to 2, 0 being exact maching and 2 being permissive.
-    // NOTE: REQUIRES UNDERSCORE.JS STRING EXTENSIONS TO BE LOADED
-    levenshtein: 1,
-
     // Computed textarea styles that have to be copied to the mirror.
     mirroredStyles: [
       'margin-top',     'margin-right',   'margin-bottom',  'margin-left',
@@ -40,15 +34,13 @@
       RIGHT:      39, DOWN:  40
     },
 
-    templates: {
-      popup: _.template(
-        '<ul>' +
-          '<% _.each(people, function(person) { %>' +
-            '<li data-id="<%= person.id %>"><%= person.name %></li>' +
-          '<% }); %>' +
-        '</ul>'
-      )
-    }
+    template: _.template(
+      '<ul>' +
+        '<% _.each(people, function(person) { %>' +
+          '<li data-id="<%= person.id %>"><%= person.name %></li>' +
+        '<% }); %>' +
+      '</ul>'
+    )
 
   };
 
@@ -221,15 +213,11 @@
       return _.any(person.name.split(' '), function(partOfName){
 
         // Prepare parts for match testing
-        var a = parts.word.toLowerCase(),
-            b = partOfName.toLowerCase();
+        var a = parts.word.toLowerCase(), b = partOfName.toLowerCase();
 
-        var isMatch       = (new RegExp('^' + a)).test(b),
-            isLevenshtein = _.isObject(_.str) ?
-              _.str.levenshtein(a, b) <= el.config.levenshtein :
-              false;
-
-        return isMatch || isLevenshtein;
+        // Jaro-winkler distance to rank
+        var score = $.apostrophe.distance(a, b);
+        return score > 0.8 ? score : false;
 
       });
     });
@@ -239,7 +227,7 @@
 
     if ( isLongEnough && isOutsideMentions && potentialPeople.length > 0 ) {
 
-      var popup_template = el.config.templates.popup({ people: potentialPeople });
+      var popup_template = el.config.template({ people: potentialPeople });
       $('#popup-container').html(popup_template);
 
       $('#popup-container li').click(function(){
@@ -360,6 +348,17 @@
 
     return results;
 
+  };
+
+  // Jaro-winkler distance
+  // https://github.com/zdyn/jaro-winkler-js
+  $.apostrophe.distance = function(a, c) {
+    var h,b,d,k,e,g,f,l,n,m,p;a.length>c.length&&
+    (c=[c,a],a=c[0],c=c[1]);k=~~Math.max(0,c.length/2-1);e=[];g=[];b=n=0;for(p=a.length;n<p;b=++n)
+    for(h=a[b],l=Math.max(0,b-k),f=Math.min(b+k+1,c.length),d=m=l;l<=f?m<f:m>f;d=l<=f?++m:--m)
+    if(null==g[d]&&h===c[d]){e[b]=h;g[d]=c[d];break}e=e.join("");g=g.join("");if(d=e.length){b=f=k=0;
+    for(l=e.length;f<l;b=++f)h=e[b],h!==g[b]&&k++;b=g=e=0;for(f=a.length;g<f;b=++g)if(h=a[b],h===c[b])
+    e++;else break;a=(d/a.length+d/c.length+(d-~~(k/2))/d)/3;a+=0.1*Math.min(e,4)*(1-a)}else a=0;return a;
   }
 
 })(jQuery, _);
