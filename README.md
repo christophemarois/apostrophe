@@ -9,7 +9,6 @@ instead of `@jonny_appleseed32`. No triggering characters.
 
 ### To be done before stable release:
 
-* Disable name lookup on existing mention
 * Undo and cut support
 * Mirror overflow (allows usage without textarea autogrow)
 * Replace levenshtein by more efficient fuzzy text searching

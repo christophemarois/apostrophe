@@ -209,8 +209,12 @@
     var parts = $.apostrophe.getParts(this.value, charIndex);
 
     // Does the current word look like a name?
-    var looksLikeName = // /^[A-Z]/.test(parts.word) &&
-      parts.word.length >= el.config.minimalLength;
+    var isLongEnough = parts.word.length >= el.config.minimalLength;
+
+    var isOutsideMentions = !_.any(el.mentionned, function(person) {
+      return charIndex >= person.pos &&
+        charIndex <= person.pos + person.name.length;
+    });
 
     // Are there names that ressemble it?
     var potentialPeople = _.filter(el.config.people, function(person){
@@ -233,7 +237,7 @@
     // If there are resembling names, trigger dropdown.
     // BEGIN: TO REFACTOR
 
-    if ( looksLikeName && potentialPeople.length > 0 ) {
+    if ( isLongEnough && isOutsideMentions && potentialPeople.length > 0 ) {
 
       var popup_template = el.config.templates.popup({ people: potentialPeople });
       $('#popup-container').html(popup_template);
