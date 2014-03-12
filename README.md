@@ -9,10 +9,8 @@ instead of `@jonny_appleseed32`. No triggering characters.
 
 ### To be done before stable release:
 
-* Update name lookup when manually changing cursor position (arrows or click)
+* Disable name lookup on existing mention
 * Undo and cut support
-* Bug: deletion of mention that starts at content's beggining
-  or ends at content's end often fails
 * Mirror overflow (allows usage without textarea autogrow)
 * Replace levenshtein by more efficient fuzzy text searching
 

@@ -95,10 +95,12 @@
         // Bind events
         $el
           .on(config.eventHandlers, $.apostrophe.update)
+          .on('keyup click', $.apostrophe.caretPositionChanged)
           .on('apostrophe.update', $.apostrophe.update)
           .on('apostrophe.destroy', function(){
             $el
               .off(config.eventHandlers, $.apostrophe.update)
+              .off('keyup click', $.apostrophe.caretPositionChanged)
               .off('apostrophe.update')
               .removeProp('mirror');
             $mirror.remove();
@@ -156,7 +158,7 @@
           (newPos < nameStart && oldPos > nameStart && oldPos < nameEnd) || // left
           (newPos > nameStart && newPos < nameEnd && oldPos > nameEnd) || // right
           (newPos >= nameStart && oldPos <= nameEnd) || // inside
-          (newPos < nameStart && oldPos > nameEnd); // outside
+          (newPos <= nameStart && oldPos >= nameEnd); // outside
 
         if (isSevered) {
           el.config.people.push(person);
@@ -176,7 +178,7 @@
     _.each(furtherPeople, function(person){ person.pos = person.pos + charDiff; });
 
     // Check if any name has been inputted
-    $.apostrophe.checkForNames.call(el, charIndex);
+    $.apostrophe.checkForName.call(el, charIndex);
 
     // Add the highlight tags in the mirror copy
     var formatted_content = el.value;
@@ -199,7 +201,7 @@
 
   };
 
-  $.apostrophe.checkForNames = function(charIndex){
+  $.apostrophe.checkForName = function(charIndex){
 
     var el = this;
 
@@ -229,7 +231,7 @@
     });
 
     // If there are resembling names, trigger dropdown.
-    // DEVELOPMENT: TO REFACTOR
+    // BEGIN: TO REFACTOR
 
     if ( looksLikeName && potentialPeople.length > 0 ) {
 
@@ -245,6 +247,8 @@
     } else {
       $('#popup-container').html('');
     }
+
+    // END: TO REFACTOR
 
   };
 
@@ -284,6 +288,20 @@
     $(el).trigger('apostrophe.update');
 
     return true;
+
+  };
+
+  $.apostrophe.caretPositionChanged = function(e) {
+
+    var el = this;
+
+    var keycodes = $.apostrophe.config.keycodes,
+        arrowKeys = [keycodes.UP, keycodes.RIGHT, keycodes.DOWN, keycodes.LEFT];
+
+    if ( _.contains(arrowKeys, e.which) || e.type =="click") {
+      var charIndex = el.selectionStart <= 0 ? 0 : el.selectionStart;
+      $.apostrophe.checkForName.call(el, charIndex);
+    }
 
   };
 
